@@ -1,40 +1,35 @@
 "use client";
 
 import { useRef, useState } from "react";
+import StoryPage from "./components/StoryPage";
 
 export default function Home() {
-  const urlRef = useRef();
-  const promptRef = useRef();
-
-  const [image, setImage] = useState(null);
-  const [text, setText] = useState("");
+  const [story, setStory] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [fullStory, setFullStory] = useState([]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const storyRef = useRef(null);
 
+  const handleCreateStory = async () => {
+    setStory(storyRef.current.value);
     setLoading(true);
-    setImage(urlRef.current.value);
-    setText("");
 
     try {
-      const res = await fetch("/api/openai", {
+      const response = await fetch("/api/openai", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          prompt: `${promptRef.current.value} ${urlRef.current.value}`,
+          story: storyRef.current.value,
         }),
       });
 
-      if (!res.ok) {
-        throw new Error("Unable to fetch response");
-      }
+      const data = await response.json();
 
-      const data = await res.json();
+      console.log(data);
 
-      setText(data.response.message.content);
+      setFullStory(data.data);
     } catch (error) {
       console.log(error.message);
     } finally {
@@ -43,37 +38,42 @@ export default function Home() {
   };
 
   return (
-    <main className="container mt-6 mx-auto px-4 max-w-2xl flex flex-col gap-4">
-      <h1 className="text-4xl font-bold">GPT-4 Image Analyzer</h1>
+    <main className="container mx-auto max-w-4xl p-4">
+      {!story && (
+        <>
+          <h1 className="text-2xl font-bold py-2">Story Time</h1>
+          <input
+            className="py-2 px-4 border border-blue-500 rounded"
+            placeholder="Enter an idea for a story"
+            defaultValue="A beautiful princess and a friendly dragon"
+            ref={storyRef}
+          />
+          <button
+            onClick={handleCreateStory}
+            className="bg-blue-500 text-white py-2 px-4 hover:opacity-90"
+          >
+            Create Story
+          </button>
+        </>
+      )}
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-        <input
-          placeholder="Enter an Image URL"
-          ref={urlRef}
-          className="py-2 px-2 w-full bg-white border border-gray-700 placeholder-gray-700 rounded-lg"
-        />
-        <input
-          placeholder="Enter a prompt"
-          ref={promptRef}
-          className="py-2 px-2 w-full bg-white border border-gray-700 placeholder-gray-700 rounded-lg"
-        />
-        <button className="uppercase py-2 px-2 rounded-xl bg-lime-700 text-white">
-          Analyze
-        </button>
-      </form>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <img src={image} />
+      {loading && (
+        <div className="text-2xl h-[100vh] w-full flex items-center justify-center">
+          Creating story, please wait...
         </div>
+      )}
 
-        <div>
-          <h3 className="text-2xl font-semibold">Response:</h3>
-          {loading ? (
-            <p className="animate-pulse">Analyzing..</p>
-          ) : (
-            <p>{text}</p>
-          )}
-        </div>
+      <div>
+        {fullStory.map((spage) => {
+          return (
+            <StoryPage
+              key={spage.PAGE}
+              page={spage.PAGE}
+              text={spage.TEXT}
+              prompt={spage.PROMPT}
+            />
+          );
+        })}
       </div>
     </main>
   );
